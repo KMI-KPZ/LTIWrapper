@@ -144,11 +144,12 @@ class LTIToolConsumer:
 
 
 if __name__ == "__main__":
+    consumer_key = "<key_from_provider>"
     consumer_secret = "<secret_from_provider>"
-    launch_url = "<launch_url_from_provider"
+    launch_url = "<launch_url_from_provider>"
 
     response = LTIToolConsumer(
-        "test", consumer_secret, launch_url
+        consumer_key, consumer_secret, launch_url
     ).launch_request()
 
     print(response[0])
