@@ -2,9 +2,9 @@
 
 Python Wrapper classes to consume and provide LTI 1.0 Tools.
 
-The consumer is a simple script that runs once and ends after consumption of the tool from the provider.
+The consumer is a simple script that visualizes the response of the tool provider in the browser via a Tornado Server.
 
-The Tool Provider on the other hand is a Tornado Server that hosts a simple demo tool.
+The Tool Provider on the other hand hosts a simple demo tool.
 
 ## Requirements
 - requests
