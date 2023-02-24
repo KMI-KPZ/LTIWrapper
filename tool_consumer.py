@@ -149,17 +149,32 @@ class LTIToolConsumer:
         return sign(request)
 
 
-class ToolConsumerExample(tornado.web.RequestHandler):
+class IframeRenderHandler(tornado.web.RequestHandler):
     """
-    Small example Tornado Handler that requests the Tool from the provider
-    and displays it on localhost:8080 in an iframe.
+    Renders the demo Webpage containing the IFrame that the tool will be visualized in
+    on http://localhost:8080 .
+    """
 
-    This example has been testet with Moodle, which replies to the launch request
-    with a "303 See Other" response. Therefore we don't follow this redirect but
-    set the iframe's src URL from the "Location"-Header.
+    def get(self):
+        with open("index.html", "r") as fp:
+            self.write(fp.read())
 
-    In case you try it with a different provider, you might have to change the display
-    logic accordingly.
+
+class PayloadDataHandler(tornado.web.RequestHandler):
+    """
+    Moodle behaves very strange...
+    So, the problem is that Moodle doesn't respond to the launch request with 
+    HTTP 200 containing the tools HTML, but instead sends a 303 Redirect containing 
+    the Location and a Cookie that validates the Moodle Session.
+    We cannot simply catch the 303 Redirect response and point our IFrame towards
+    the Location, because then we are missing the Session Cookie, resulting in
+    a Login-Screen barrier.
+    So, the workaround is to let the IFrame do the launch request itself, such that
+    it receives the Cookie first and then redirects to the correct Location.
+    To do that, we provide a hidden form in the HTML below the IFrame that
+    prepares the parameters of the launch request and points this Form towards
+    the IFrame as a POST request and submits that form immediately to consume the
+    tool and ultimately render it in the IFrame. 
     """
 
     def get(self):
@@ -167,35 +182,34 @@ class ToolConsumerExample(tornado.web.RequestHandler):
         global consumer_secret
         global launch_url
 
-        # do the launch request
-        response = LTIToolConsumer(
-            consumer_key, consumer_secret, launch_url
-        ).launch_request(allow_redirects=False)
-
-        # display content in an iframe
-        # (adapted especiall for Moodle's "303 See Other" response)
-        self.write(
-            """
-            <h1>tool from Provider:</h1>
-            <br/>
-            <iframe width=100% height=100% src={}></iframe>
-            """.format(
-                response[1]["Location"]
-            )
+        # prepare the launch request's parameters
+        consumer = LTIToolConsumer(consumer_key, consumer_secret, launch_url)
+        request = consumer.sign_request(
+            consumer.generate_launch_request_payload()
         )
+        payload_body = consumer.parse_qs(
+            request.body.decode("utf8"), keep_blank_values=True
+        )
+
+        self.write(payload_body)
 
 
 def make_app():
-    return tornado.web.Application([(r"/", ToolConsumerExample)])
+    return tornado.web.Application(
+        [
+            (r"/", IframeRenderHandler),
+            (r"/payload", PayloadDataHandler),
+        ]
+    )
 
 
 if __name__ == "__main__":
     #######################################################
     # CHANGE THOSE VALUES ACCORDING TO YOUR TOOL PROVIDER #
     #######################################################
-    consumer_key = "key_from_provider"
-    consumer_secret = "seret_from_provider"
-    launch_url = "launch_url_from_provider"
+    consumer_key = "test"
+    consumer_secret = "KizQNAcz6MZ3DYUQjRK9k3Qaua9lM2CM"
+    launch_url = "https://skm.sc.uni-leipzig.de:9090/enrol/lti/tool.php?id=7"
     #######################################################
     #                                                     #
     #######################################################
@@ -214,7 +228,7 @@ if __name__ == "__main__":
     # do the launch request and log it to file for debugging
     response = LTIToolConsumer(
         consumer_key, consumer_secret, launch_url
-    ).launch_request(allow_redirects=False)
+    ).launch_request(allow_redirects=True)
 
     with open("consumer_log.txt", "a") as log:
         log.write(str(response[0]) + "\n")

@@ -1,0 +1,50 @@
+<html>
+
+<head>
+    <script src="https://code.jquery.com/jquery-3.6.3.js"
+        integrity="sha256-nQLuAZGRRcILA+6dMBOvcRh5Pe310sBpanc6+QBmyVM=" crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <h1>tool from Provider:</h1>
+    <br />
+    <iframe name="tool" width=100% height=100%></iframe>
+    <script>
+        $(document).ready(function () {
+
+            // hidden form that sends the LTI Launch Request and points it into the iframe
+            var form, input;
+            form = document.createElement("form");
+            form.action = "https://skm.sc.uni-leipzig.de:9090/enrol/lti/tool.php?id=7";
+            form.target = "tool";
+            form.method = "POST";
+            form.enctype = "multipart/form-data";
+
+            get_lti_payload().then(function () {
+                document.body.appendChild(form);
+                form.submit();
+            });
+
+            function get_lti_payload() {
+                return $.ajax({
+                    method: "GET",
+                    url: "/payload",
+                    async: false,
+                    success: function (response) {
+                        for (const [key, value] of Object.entries(response)) {
+                            input = document.createElement("input");
+                            input.type = "hidden";
+                            input.name = key;
+                            input.id = key;
+                            input.value = value;
+                            form.appendChild(input);
+                        }
+                    }
+                });
+            }
+        });
+
+    </script>
+</body>
+
+</html>
